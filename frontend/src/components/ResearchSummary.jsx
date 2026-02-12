@@ -6,6 +6,43 @@ const formatNumber = (num) => {
   return num.toLocaleString();
 };
 
+// Helper function to format large numbers with suffix (M/B/T)
+const formatLargeNumber = (num, suffix = '') => {
+  if (num === null || num === undefined) return '-';
+  if (num >= 1e12) {
+    return `${(num / 1e12).toFixed(2)}T${suffix}`;
+  } else if (num >= 1e9) {
+    return `${(num / 1e9).toFixed(2)}B${suffix}`;
+  } else if (num >= 1e6) {
+    return `${(num / 1e6).toFixed(2)}M${suffix}`;
+  } else if (num >= 1e3) {
+    return `${(num / 1e3).toFixed(2)}K${suffix}`;
+  }
+  return `${num.toFixed(2)}${suffix}`;
+};
+
+// Helper function to format population in millions
+const formatPopulation = (num) => {
+  if (num === null || num === undefined) return '-';
+  if (num >= 1e6) {
+    return `${(num / 1e6).toFixed(1)}M`;
+  }
+  return formatNumber(num);
+};
+
+// Helper function to format oz values in billions/millions
+const formatOz = (num) => {
+  if (num === null || num === undefined) return '-';
+  if (num >= 1e9) {
+    return `${(num / 1e9).toFixed(2)}B oz`;
+  } else if (num >= 1e6) {
+    return `${(num / 1e6).toFixed(2)}M oz`;
+  } else if (num >= 1e3) {
+    return `${(num / 1e3).toFixed(2)}K oz`;
+  }
+  return `${formatNumber(Math.round(num))} oz`;
+};
+
 // Helper function to format currency
 const formatCurrency = (num, goldPrice = 2900) => {
   if (num === null || num === undefined) return '-';
@@ -235,6 +272,9 @@ function ResearchSummary() {
     const dateStr = now.toISOString().split('T')[0];
     const timeStr = now.toTimeString().split(' ')[0].replace(/:/g, '-');
 
+    // Helper for percentage
+    const pct = (num, total) => total > 0 ? ((num / total) * 100).toFixed(1) : '0.0';
+
     // Generate markdown content
     let markdown = `# SAVE Research Summary Report\n\n`;
     markdown += `**Generated:** ${now.toLocaleString()}\n`;
@@ -242,13 +282,16 @@ function ResearchSummary() {
     markdown += `**Total Rulers:** ${sortedData.length}\n\n`;
     markdown += `---\n\n`;
 
-    // Summary Table
+    // Summary Table with formatted values
     markdown += `## Summary Table\n\n`;
-    markdown += `| Rank | Ruler | Year | Population | Total Wealth (oz) | Nominal Value |\n`;
-    markdown += `|------|-------|------|------------|-------------------|---------------|\n`;
+    markdown += `| Rank | Ruler | Year | Population | Total Wealth | Nominal Value |\n`;
+    markdown += `|------|-------|------|------------|--------------|---------------|\n`;
 
     sortedData.forEach((item, index) => {
-      markdown += `| ${index + 1} | ${item.json.ruler_name} | ${item.json.year} | ${formatNumber(item.json.population)} | ${formatNumber(Math.round(item.calculations?.totalWealth || 0))} | ${formatCurrency(item.calculations?.totalWealth, goldPrice)} |\n`;
+      const pop = formatPopulation(item.json.population);
+      const wealth = formatLargeNumber(item.calculations?.totalWealth || 0, ' oz');
+      const nominal = formatCurrency(item.calculations?.totalWealth, goldPrice);
+      markdown += `| ${index + 1} | ${item.json.ruler_name} | ${item.json.year} | ${pop} | ${wealth} | ${nominal} |\n`;
     });
 
     markdown += `\n---\n\n`;
@@ -257,7 +300,10 @@ function ResearchSummary() {
     markdown += `## Individual Ruler Details\n\n`;
 
     sortedData.forEach((item, index) => {
-      markdown += `### ${index + 1}. ${item.json.ruler_name}\n\n`;
+      const calc = item.calculations;
+      const json = item.json;
+
+      markdown += `### ${index + 1}. ${json.ruler_name}\n\n`;
 
       if (item.targetInfo.empire) {
         markdown += `**Empire:** ${item.targetInfo.empire}\n`;
@@ -279,34 +325,81 @@ function ResearchSummary() {
       markdown += `#### Input Parameters\n\n`;
       markdown += `| Parameter | Value |\n`;
       markdown += `|-----------|-------|\n`;
-      markdown += `| Population (N) | ${formatNumber(item.json.population)} |\n`;
-      markdown += `| Base Output (B) | ${item.json.base_output} oz/person/year |\n`;
-      markdown += `| Velocity (V) | ${item.json.velocity} |\n`;
-      markdown += `| Extraction Margin (M) | ${(item.json.extraction_margin * 100).toFixed(0)}% |\n`;
-      markdown += `| Capitalization Multiple (K) | ${item.json.capitalization_multiple}x |\n`;
-      markdown += `| Liquid Treasury (L) | ${formatNumber(item.json.liquid_treasury)} oz |\n`;
-      markdown += `| Imperial Real Estate (R) | ${formatNumber(item.json.imperial_real_estate)} oz |\n`;
-      markdown += `| Extraordinary Gains (E) | ${formatNumber(item.json.extraordinary_gains)} oz |\n`;
+      markdown += `| Population (N) | ${formatPopulation(json.population)} (${formatNumber(json.population)}) |\n`;
+      markdown += `| Base Output (B) | ${json.base_output} oz/person/year |\n`;
+      markdown += `| Velocity (V) | ${json.velocity} |\n`;
+      markdown += `| Extraction Margin (M) | ${(json.extraction_margin * 100).toFixed(0)}% |\n`;
+      markdown += `| Capitalization Multiple (K) | ${json.capitalization_multiple}x |\n`;
+      markdown += `| Liquid Treasury (L) | ${formatOz(json.liquid_treasury)} |\n`;
+      markdown += `| Imperial Real Estate (R) | ${formatOz(json.imperial_real_estate)} |\n`;
+      markdown += `| Extraordinary Gains (E) | ${formatOz(json.extraordinary_gains)} |\n`;
       markdown += `\n`;
 
-      // Calculated Results
-      if (item.calculations) {
-        markdown += `#### Calculated Results\n\n`;
+      // Income Wealth Section
+      if (calc) {
+        markdown += `#### Income Wealth\n\n`;
         markdown += `| Metric | Value |\n`;
         markdown += `|--------|-------|\n`;
-        markdown += `| Adjusted Gross Revenue (AGR) | ${formatNumber(Math.round(item.calculations.agr))} oz |\n`;
-        markdown += `| Annual Imperial Income (AII) | ${formatNumber(Math.round(item.calculations.aii))} oz |\n`;
-        markdown += `| Income Wealth | ${formatNumber(Math.round(item.calculations.incomeWealth))} oz |\n`;
-        markdown += `| Infrastructure Floor | ${formatNumber(Math.round(item.calculations.infrastructure))} oz |\n`;
-        markdown += `| Asset Wealth | ${formatNumber(Math.round(item.calculations.assetWealth))} oz |\n`;
-        markdown += `| **Total Real Wealth** | **${formatNumber(Math.round(item.calculations.totalWealth))} oz** |\n`;
-        markdown += `| **Nominal Value** | **${formatCurrency(item.calculations.totalWealth, goldPrice)}** |\n`;
+        markdown += `| Adjusted Gross Revenue (AGR) | ${formatOz(calc.agr)} |\n`;
+        markdown += `| Annual Imperial Income (AII) | ${formatOz(calc.aii)} |\n`;
+        markdown += `| **Income Wealth (AII × K)** | **${formatOz(calc.incomeWealth)}** |\n`;
+        markdown += `\n`;
+
+        // Asset Wealth Section
+        markdown += `#### Asset Wealth\n\n`;
+        markdown += `| Component | Value |\n`;
+        markdown += `|-----------|-------|\n`;
+        markdown += `| Infrastructure Floor (I) | ${formatOz(calc.infrastructure)} |\n`;
+        markdown += `| Liquid Treasury (L) | ${formatOz(json.liquid_treasury)} |\n`;
+        markdown += `| Imperial Real Estate (R) | ${formatOz(json.imperial_real_estate)} |\n`;
+        markdown += `| Extraordinary Gains (E) | ${formatOz(json.extraordinary_gains)} |\n`;
+        markdown += `| **Asset Wealth (I+L+R+E)** | **${formatOz(calc.assetWealth)}** |\n`;
+        markdown += `\n`;
+
+        // Wealth Composition
+        markdown += `#### Wealth Composition\n\n`;
+        const totalWealth = calc.totalWealth;
+        markdown += `| Component | Value | % of Total |\n`;
+        markdown += `|-----------|-------|------------|\n`;
+        markdown += `| Income Wealth | ${formatOz(calc.incomeWealth)} | ${pct(calc.incomeWealth, totalWealth)}% |\n`;
+        markdown += `| Asset Wealth | ${formatOz(calc.assetWealth)} | ${pct(calc.assetWealth, totalWealth)}% |\n`;
+        markdown += `| └─ Infrastructure | ${formatOz(calc.infrastructure)} | ${pct(calc.infrastructure, totalWealth)}% |\n`;
+        markdown += `| └─ Liquid Treasury | ${formatOz(json.liquid_treasury)} | ${pct(json.liquid_treasury, totalWealth)}% |\n`;
+        markdown += `| └─ Real Estate | ${formatOz(json.imperial_real_estate)} | ${pct(json.imperial_real_estate, totalWealth)}% |\n`;
+        markdown += `| └─ Extraordinary Gains | ${formatOz(json.extraordinary_gains)} | ${pct(json.extraordinary_gains, totalWealth)}% |\n`;
+        markdown += `| **TOTAL** | **${formatOz(totalWealth)}** | **100%** |\n`;
+        markdown += `\n`;
+
+        // CFO Metrics
+        markdown += `#### CFO Metrics\n\n`;
+        const wealthPerCapita = totalWealth / json.population;
+        const incomePerCapita = calc.aii / json.population;
+        const assetToIncome = calc.assetWealth / calc.incomeWealth;
+        const liquidityRatio = json.liquid_treasury / totalWealth;
+        const agrPerCapita = calc.agr / json.population;
+
+        markdown += `| Metric | Value |\n`;
+        markdown += `|--------|-------|\n`;
+        markdown += `| Total Wealth per Capita | ${wealthPerCapita.toFixed(2)} oz/person |\n`;
+        markdown += `| Annual Income per Capita | ${incomePerCapita.toFixed(4)} oz/person |\n`;
+        markdown += `| AGR per Capita | ${agrPerCapita.toFixed(2)} oz/person |\n`;
+        markdown += `| Asset-to-Income Ratio | ${assetToIncome.toFixed(2)}x |\n`;
+        markdown += `| Liquidity Ratio | ${(liquidityRatio * 100).toFixed(1)}% |\n`;
+        markdown += `| Extraction Efficiency | ${(json.extraction_margin * 100).toFixed(0)}% |\n`;
+        markdown += `| Economic Velocity | ${json.velocity}x |\n`;
+        markdown += `\n`;
+
+        // Total Summary
+        markdown += `#### Total Real Wealth\n\n`;
+        markdown += `| | Gold Ounces | Nominal USD |\n`;
+        markdown += `|---|-------------|-------------|\n`;
+        markdown += `| **TOTAL** | **${formatOz(totalWealth)}** | **${formatCurrency(totalWealth, goldPrice)}** |\n`;
         markdown += `\n`;
       }
 
       // JSON Output
       markdown += `#### Machine-Readable JSON\n\n`;
-      markdown += `\`\`\`json\n${JSON.stringify(item.json, null, 2)}\n\`\`\`\n\n`;
+      markdown += `\`\`\`json\n${JSON.stringify(json, null, 2)}\n\`\`\`\n\n`;
       markdown += `---\n\n`;
     });
 
@@ -459,10 +552,10 @@ function ResearchSummary() {
                       {item.json.year}
                     </td>
                     <td className="px-4 py-3 text-right text-gray-300">
-                      {formatNumber(item.json.population)}
+                      {formatPopulation(item.json.population)}
                     </td>
                     <td className="px-4 py-3 text-right text-amber-400 font-semibold">
-                      {formatNumber(Math.round(item.calculations?.totalWealth || 0))}
+                      {formatLargeNumber(item.calculations?.totalWealth || 0)}
                     </td>
                     <td className="px-4 py-3 text-right text-green-400">
                       {formatCurrency(item.calculations?.totalWealth, goldPrice)}
