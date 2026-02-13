@@ -724,6 +724,464 @@ def create_save_model(filename="SAVE_Model.xlsx"):
     ws2['D16'] = 0
     ws2['D18'] = 2900
 
+    # =========================================
+    # CREATE RULER TABLE TAB (Rows = Rulers, Columns = Variables)
+    # =========================================
+    ws3 = wb.create_sheet(title="Ruler Table")
+
+    num_ruler_rows = 50  # Number of ruler rows available
+
+    # Column definitions: (column_letter, header, width, is_input, number_format, formula_or_none)
+    # Formulas use ROW to reference the current row
+    columns = [
+        ('A', '#', 4, False, '0', None),
+        ('B', 'Ruler/Empire Name', 30, True, '@', None),
+        ('C', 'Year', 8, True, '0', None),
+        # Input parameters
+        ('D', 'Population (N)', 15, True, '#,##0', None),
+        ('E', 'Base Output (B)', 12, True, '0.00', None),
+        ('F', 'Velocity (V)', 10, True, '0.0', None),
+        ('G', 'Margin (M)', 10, True, '0.00', None),
+        ('H', 'Cap Mult (K)', 10, True, '0', None),
+        ('I', 'Treasury (L)', 15, True, '#,##0', None),
+        ('J', 'Real Estate (R)', 15, True, '#,##0', None),
+        ('K', 'Extra Gains (E)', 15, True, '#,##0', None),
+        ('L', 'Gold Price', 12, True, '#,##0', None),
+        # Calculated - Income
+        ('M', 'AGR', 15, False, '#,##0', '=IF($D{row}>0,$D{row}*$E{row}*$F{row},"")'),
+        ('N', 'AII', 15, False, '#,##0', '=IF($M{row}<>"",$M{row}*$G{row},"")'),
+        ('O', 'Income Wealth', 18, False, '#,##0', '=IF($N{row}<>"",$N{row}*$H{row},"")'),
+        # Calculated - Assets
+        ('P', 'Infrastructure', 15, False, '#,##0', '=IF($D{row}>0,($D{row}*$E{row})*0.05,"")'),
+        ('Q', 'Asset Wealth', 15, False, '#,##0', '=IF($P{row}<>"",$P{row}+$I{row}+$J{row}+$K{row},"")'),
+        # Totals
+        ('R', 'Total Wealth (oz)', 18, False, '#,##0', '=IF($O{row}<>"",$O{row}+$Q{row},"")'),
+        ('S', 'Total (B oz)', 12, False, '0.00" B"', '=IF($R{row}<>"",$R{row}/1000000000,"")'),
+        ('T', 'Nominal USD', 18, False, '$#,##0', '=IF(AND($R{row}<>"",$L{row}>0),$R{row}*$L{row},"")'),
+        ('U', 'Nominal ($T)', 12, False, '$0.00" T"', '=IF($T{row}<>"",$T{row}/1000000000000,"")'),
+        # CFO Metrics
+        ('V', 'Income/Asset', 12, False, '0.00" x"', '=IF(AND($O{row}<>"",$Q{row}>0),$O{row}/$Q{row},"")'),
+        ('W', 'Per Capita', 12, False, '0.00', '=IF(AND($R{row}<>"",$D{row}>0),$R{row}/$D{row},"")'),
+        ('X', 'Annual Yield', 10, False, '0.00%', '=IF(AND($N{row}<>"",$R{row}>0),$N{row}/$R{row},"")'),
+        ('Y', 'Income %', 10, False, '0.0%', '=IF(AND($O{row}<>"",$R{row}>0),$O{row}/$R{row},"")'),
+        ('Z', 'Asset %', 10, False, '0.0%', '=IF(AND($Q{row}<>"",$R{row}>0),$Q{row}/$R{row},"")'),
+    ]
+
+    # Set column widths and create headers
+    for col_letter, header, width, is_input, num_fmt, formula in columns:
+        ws3.column_dimensions[col_letter].width = width
+
+    # Title row
+    ws3.merge_cells('B1:U1')
+    ws3['B1'] = "SAVE Ruler Table - Enter one ruler per row, results auto-calculate"
+    ws3['B1'].font = Font(bold=True, size=14, color="F59E0B")
+    ws3['B1'].fill = header_fill_dark
+
+    # Section headers row 2
+    ws3.merge_cells('B2:C2')
+    ws3['B2'] = "Identity"
+    ws3['B2'].font = Font(bold=True, size=10, color="FFFFFF")
+    ws3['B2'].fill = header_fill_dark
+    ws3['B2'].alignment = Alignment(horizontal='center')
+
+    ws3.merge_cells('D2:H2')
+    ws3['D2'] = "Income Parameters"
+    ws3['D2'].font = Font(bold=True, size=10, color="60A5FA")
+    ws3['D2'].fill = income_section_fill
+    ws3['D2'].alignment = Alignment(horizontal='center')
+
+    ws3.merge_cells('I2:K2')
+    ws3['I2'] = "Asset Parameters"
+    ws3['I2'].font = Font(bold=True, size=10, color="34D399")
+    ws3['I2'].fill = asset_section_fill
+    ws3['I2'].alignment = Alignment(horizontal='center')
+
+    ws3['L2'] = "Settings"
+    ws3['L2'].font = Font(bold=True, size=10, color="F59E0B")
+    ws3['L2'].fill = header_fill_dark
+    ws3['L2'].alignment = Alignment(horizontal='center')
+
+    ws3.merge_cells('M2:O2')
+    ws3['M2'] = "Income Valuation"
+    ws3['M2'].font = Font(bold=True, size=10, color="60A5FA")
+    ws3['M2'].fill = income_section_fill
+    ws3['M2'].alignment = Alignment(horizontal='center')
+
+    ws3.merge_cells('P2:Q2')
+    ws3['P2'] = "Asset Valuation"
+    ws3['P2'].font = Font(bold=True, size=10, color="34D399")
+    ws3['P2'].fill = asset_section_fill
+    ws3['P2'].alignment = Alignment(horizontal='center')
+
+    ws3.merge_cells('R2:U2')
+    ws3['R2'] = "Total Wealth"
+    ws3['R2'].font = Font(bold=True, size=10, color="F59E0B")
+    ws3['R2'].fill = total_section_fill
+    ws3['R2'].alignment = Alignment(horizontal='center')
+
+    ws3.merge_cells('V2:Z2')
+    ws3['V2'] = "CFO Metrics"
+    ws3['V2'].font = Font(bold=True, size=10, color="A78BFA")
+    ws3['V2'].fill = cfo_section_fill
+    ws3['V2'].alignment = Alignment(horizontal='center')
+
+    # Column headers row 3
+    for col_letter, header, width, is_input, num_fmt, formula in columns:
+        cell = ws3[f'{col_letter}3']
+        cell.value = header
+        cell.font = Font(bold=True, size=9, color="FFFFFF")
+        cell.fill = header_fill_dark
+        cell.border = thin_border
+        cell.alignment = Alignment(horizontal='center', wrap_text=True)
+
+    # Add color coding to input vs output headers
+    for col_letter, header, width, is_input, num_fmt, formula in columns:
+        cell = ws3[f'{col_letter}3']
+        if is_input and col_letter not in ['A']:
+            if col_letter in ['D', 'E', 'F', 'G', 'H']:
+                cell.fill = income_section_fill
+            elif col_letter in ['I', 'J', 'K']:
+                cell.fill = asset_section_fill
+            elif col_letter == 'L':
+                cell.fill = header_fill_dark
+            else:
+                cell.fill = input_section_fill
+        elif col_letter in ['M', 'N', 'O']:
+            cell.fill = income_section_fill
+        elif col_letter in ['P', 'Q']:
+            cell.fill = asset_section_fill
+        elif col_letter in ['R', 'S', 'T', 'U']:
+            cell.fill = total_section_fill
+        elif col_letter in ['V', 'W', 'X', 'Y', 'Z']:
+            cell.fill = cfo_section_fill
+
+    # Data rows
+    for i in range(num_ruler_rows):
+        row_num = i + 4  # Data starts at row 4
+
+        for col_letter, header, width, is_input, num_fmt, formula in columns:
+            cell = ws3[f'{col_letter}{row_num}']
+
+            if col_letter == 'A':
+                cell.value = i + 1
+                cell.font = Font(size=9, color="6B7280")
+                cell.fill = header_fill_dark
+            elif is_input:
+                # Input cell styling
+                if col_letter in ['D', 'E', 'F', 'G', 'H']:
+                    cell.fill = PatternFill(start_color="1E3A5F", end_color="1E3A5F", fill_type="solid")
+                elif col_letter in ['I', 'J', 'K']:
+                    cell.fill = PatternFill(start_color="14532D", end_color="14532D", fill_type="solid")
+                else:
+                    cell.fill = input_section_fill
+                cell.border = thin_border
+                cell.font = Font(size=10, color="FFFFFF")
+            elif formula:
+                # Output cell with formula
+                cell.value = formula.format(row=row_num)
+                if col_letter in ['M', 'N', 'O']:
+                    cell.fill = PatternFill(start_color="172554", end_color="172554", fill_type="solid")
+                elif col_letter in ['P', 'Q']:
+                    cell.fill = PatternFill(start_color="0F2F1E", end_color="0F2F1E", fill_type="solid")
+                elif col_letter in ['R', 'S', 'T', 'U']:
+                    cell.fill = PatternFill(start_color="451A03", end_color="451A03", fill_type="solid")
+                    cell.font = Font(bold=True, size=10, color="F59E0B")
+                elif col_letter in ['V', 'W', 'X', 'Y', 'Z']:
+                    cell.fill = PatternFill(start_color="2E1065", end_color="2E1065", fill_type="solid")
+                    cell.font = Font(size=10, color="FFFFFF")
+                else:
+                    cell.fill = PatternFill(start_color="1F2937", end_color="1F2937", fill_type="solid")
+                    cell.font = Font(size=10, color="FFFFFF")
+
+                # Override font for total columns
+                if col_letter not in ['R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']:
+                    cell.font = Font(size=10, color="FFFFFF")
+
+            cell.number_format = num_fmt
+            cell.alignment = Alignment(horizontal='right' if col_letter != 'B' else 'left')
+
+    # Freeze panes - freeze row 3 and column A
+    ws3.freeze_panes = 'B4'
+
+    # Add sample data
+    sample_data = [
+        ("Akbar the Great (Mughal Empire)", 1600, 110000000, 0.75, 4.5, 0.10, 20, 50000000, 10000000, 5000000, 2900),
+        ("Mansa Musa I (Mali Empire)", 1324, 20000000, 0.8, 4.0, 0.15, 20, 16000000, 0, 0, 2900),
+        ("Emperor Shenzong (Song Dynasty)", 1080, 100000000, 1.2, 6.0, 0.12, 22, 80000000, 100000000, 0, 2900),
+        ("Augustus Caesar (Roman Empire)", 14, 55000000, 0.8, 4.5, 0.15, 18, 30000000, 20000000, 50000000, 2900),
+        ("Genghis Khan (Mongol Empire)", 1227, 60000000, 0.5, 3.0, 0.30, 15, 50000000, 10000000, 100000000, 2900),
+    ]
+
+    for i, data in enumerate(sample_data):
+        row_num = i + 4
+        ws3[f'B{row_num}'] = data[0]
+        ws3[f'C{row_num}'] = data[1]
+        ws3[f'D{row_num}'] = data[2]
+        ws3[f'E{row_num}'] = data[3]
+        ws3[f'F{row_num}'] = data[4]
+        ws3[f'G{row_num}'] = data[5]
+        ws3[f'H{row_num}'] = data[6]
+        ws3[f'I{row_num}'] = data[7]
+        ws3[f'J{row_num}'] = data[8]
+        ws3[f'K{row_num}'] = data[9]
+        ws3[f'L{row_num}'] = data[10]
+
+    # Apply dark background to empty cells
+    for r in range(1, num_ruler_rows + 5):
+        for c in range(1, 27):  # A to Z
+            cell = ws3.cell(row=r, column=c)
+            if cell.fill.start_color.index == '00000000' or cell.fill.start_color.index is None:
+                cell.fill = PatternFill(start_color="111827", end_color="111827", fill_type="solid")
+
+    # =========================================
+    # CREATE READ ME TAB
+    # =========================================
+    ws4 = wb.create_sheet(title="Read Me", index=0)  # Insert at beginning
+
+    # Styles
+    title_font = Font(bold=True, size=18, color="F59E0B")
+    h1_font = Font(bold=True, size=14, color="F59E0B")
+    h2_font = Font(bold=True, size=12, color="60A5FA")
+    h3_font = Font(bold=True, size=11, color="34D399")
+    body_font = Font(size=10, color="D1D5DB")
+    formula_font = Font(size=10, color="A78BFA", italic=True)
+    highlight_font = Font(bold=True, size=10, color="F59E0B")
+    dark_fill = PatternFill(start_color="111827", end_color="111827", fill_type="solid")
+
+    # Set column widths
+    ws4.column_dimensions['A'].width = 3
+    ws4.column_dimensions['B'].width = 25
+    ws4.column_dimensions['C'].width = 15
+    ws4.column_dimensions['D'].width = 60
+    ws4.column_dimensions['E'].width = 30
+    ws4.column_dimensions['F'].width = 3
+
+    row = 2
+
+    def add_text(text, font=body_font, col='B', merge_to='E'):
+        nonlocal row
+        ws4[f'{col}{row}'] = text
+        ws4[f'{col}{row}'].font = font
+        ws4[f'{col}{row}'].fill = dark_fill
+        ws4[f'{col}{row}'].alignment = Alignment(wrap_text=True, vertical='top')
+        if merge_to:
+            ws4.merge_cells(f'{col}{row}:{merge_to}{row}')
+        row += 1
+
+    def add_blank():
+        nonlocal row
+        row += 1
+
+    def add_variable(name, symbol, description, formula=""):
+        nonlocal row
+        ws4[f'B{row}'] = name
+        ws4[f'B{row}'].font = highlight_font
+        ws4[f'B{row}'].fill = dark_fill
+
+        ws4[f'C{row}'] = symbol
+        ws4[f'C{row}'].font = formula_font
+        ws4[f'C{row}'].fill = dark_fill
+
+        ws4[f'D{row}'] = description
+        ws4[f'D{row}'].font = body_font
+        ws4[f'D{row}'].fill = dark_fill
+        ws4[f'D{row}'].alignment = Alignment(wrap_text=True, vertical='top')
+
+        ws4[f'E{row}'] = formula
+        ws4[f'E{row}'].font = formula_font
+        ws4[f'E{row}'].fill = dark_fill
+
+        row += 1
+
+    # =========================================
+    # CONTENT
+    # =========================================
+
+    # Title
+    add_text("SOVEREIGN ASSET VALUATION ENGINE (SAVE)", title_font)
+    add_text("User Guide & Model Documentation", Font(size=12, color="9CA3AF"))
+    add_blank()
+
+    # Overview
+    add_text("1. OVERVIEW", h1_font)
+    add_text("The Sovereign Asset Valuation Engine (SAVE) calculates the 'Real Wealth' of historical sovereign rulers using the Consolidated Imperial Valuation (CIV) methodology. All values are expressed in Gold Ounces as an inflation-neutral unit of account.")
+    add_blank()
+    add_text("The model combines two approaches:")
+    add_text("  • Income Valuation - Values the ruler's ongoing revenue stream (like valuing a business)")
+    add_text("  • Asset Valuation - Values the ruler's accumulated assets (like a balance sheet)")
+    add_blank()
+
+    # Tabs Description
+    add_text("2. SPREADSHEET TABS", h1_font)
+    add_blank()
+    add_text("SAVE Calculator", h2_font)
+    add_text("Single-ruler calculator with inputs on the left and results on the right. Good for detailed analysis of one ruler at a time.")
+    add_blank()
+    add_text("Comparison Table", h2_font)
+    add_text("Variables in rows, rulers in columns. Good for comparing specific metrics across multiple rulers. Enter data in columns C, D, E, etc.")
+    add_blank()
+    add_text("Ruler Table", h2_font)
+    add_text("Rulers in rows, variables in columns. Traditional spreadsheet format - one ruler per row. Best for building a database of many rulers. Pre-populated with 16 historical figures.")
+    add_blank()
+
+    # Core Formula
+    add_text("3. CORE FORMULAS", h1_font)
+    add_blank()
+    add_text("Total Real Wealth = Income Wealth + Asset Wealth", formula_font)
+    add_blank()
+    add_text("Income Wealth Calculation:", h3_font)
+    add_text("  AGR = N × B × V", formula_font)
+    add_text("  AII = AGR × M", formula_font)
+    add_text("  Income Wealth = AII × K", formula_font)
+    add_blank()
+    add_text("Asset Wealth Calculation:", h3_font)
+    add_text("  Infrastructure (I) = (N × B) × 0.05", formula_font)
+    add_text("  Asset Wealth = I + L + R + E", formula_font)
+    add_blank()
+
+    # Input Variables
+    add_text("4. INPUT VARIABLES", h1_font)
+    add_blank()
+    add_text("Identity", h2_font)
+    add_variable("Ruler/Empire Name", "-", "Name of the sovereign ruler and their empire/kingdom", "Text")
+    add_variable("Year", "-", "Peak year of wealth measurement (use negative for BC)", "Number")
+    add_blank()
+
+    add_text("Income Parameters", h2_font)
+    add_variable("Population", "N", "Total population under the ruler's control. For private individuals (non-sovereigns), use 1.", "Number (persons)")
+    add_variable("Base Output", "B", "Economic output per person per year in gold ounce equivalents. Default 1.0 oz. Lower for pre-industrial/subsistence economies (0.3-0.8), higher for advanced economies (1.0-1.5).", "oz/person/year")
+    add_variable("Velocity", "V", "Economic velocity multiplier reflecting how actively wealth circulates. Range 2.0-8.0. Lower for barter/subsistence economies, higher for monetized economies with banking.", "Multiplier (2.0-8.0)")
+    add_variable("Extraction Margin", "M", "Percentage of economic output the ruler extracts through taxes, tribute, monopolies. Range 0.01-0.50 (1%-50%). Typical range 0.10-0.25.", "Decimal (0.01-0.50)")
+    add_variable("Capitalization Multiple", "K", "Multiple applied to annual income to get total value (like P/E ratio). Default 20. Lower for unstable regimes (5-15), higher for stable empires (20-25).", "Multiplier (1-100)")
+    add_blank()
+
+    add_text("Asset Parameters", h2_font)
+    add_variable("Liquid Treasury", "L", "Gold, silver, jewels, and cash reserves in the ruler's treasury. Expressed in gold ounce equivalents.", "Gold ounces")
+    add_variable("Imperial Real Estate", "R", "Value of crown lands, palaces, mines, monopolies, and productive assets. Expressed in gold ounce equivalents.", "Gold ounces")
+    add_variable("Extraordinary Gains", "E", "One-time windfalls from conquest, inheritance, or plunder. Not recurring income.", "Gold ounces")
+    add_blank()
+
+    add_text("Valuation Settings", h2_font)
+    add_variable("Gold Price", "$/oz", "Current gold price in USD per troy ounce. Used to convert gold ounces to nominal USD value. Default $2,900.", "USD per oz")
+    add_blank()
+
+    # Output Variables
+    add_text("5. OUTPUT VARIABLES (Calculated)", h1_font)
+    add_blank()
+
+    add_text("Income Valuation", h2_font)
+    add_variable("Annual Gross Revenue", "AGR", "Total economic output under the ruler's control.", "N × B × V")
+    add_variable("Annual Imperial Income", "AII", "Portion of AGR extracted by the ruler annually.", "AGR × M")
+    add_variable("Income Wealth", "-", "Capitalized value of the income stream.", "AII × K")
+    add_blank()
+
+    add_text("Asset Valuation", h2_font)
+    add_variable("Infrastructure Floor", "I", "Minimum infrastructure value (5% of base economic output).", "(N × B) × 0.05")
+    add_variable("Asset Wealth", "-", "Sum of all asset components.", "I + L + R + E")
+    add_blank()
+
+    add_text("Total Wealth", h2_font)
+    add_variable("Total Real Wealth", "-", "Combined income and asset wealth in gold ounces.", "Income Wealth + Asset Wealth")
+    add_variable("Total (Billions)", "-", "Total wealth expressed in billions of gold ounces.", "Total / 1,000,000,000")
+    add_variable("Nominal USD", "-", "Total wealth converted to US dollars.", "Total × Gold Price")
+    add_variable("Nominal (Trillions)", "-", "Nominal value in trillions of USD.", "Nominal / 1,000,000,000,000")
+    add_blank()
+
+    # CFO Metrics
+    add_text("6. CFO METRICS (Calculated)", h1_font)
+    add_blank()
+    add_variable("Income-to-Asset Ratio", "-", "Ratio of income wealth to asset wealth. Higher = more income-driven wealth.", "Income Wealth / Asset Wealth")
+    add_variable("Extraction Efficiency", "-", "Same as Extraction Margin (M). Shows % of economy captured.", "M (as percentage)")
+    add_variable("Per Capita Wealth", "-", "Total wealth divided by population. Wealth per person.", "Total Wealth / N")
+    add_variable("Annual Yield", "-", "Annual income as % of total wealth. Like dividend yield.", "AII / Total Wealth")
+    add_variable("Income Wealth %", "-", "Percentage of total wealth from income valuation.", "Income Wealth / Total")
+    add_variable("Asset Wealth %", "-", "Percentage of total wealth from asset valuation.", "Asset Wealth / Total")
+    add_blank()
+
+    # Usage Guide
+    add_text("7. HOW TO USE", h1_font)
+    add_blank()
+    add_text("For Single Ruler Analysis:", h3_font)
+    add_text("  1. Go to 'SAVE Calculator' tab")
+    add_text("  2. Enter ruler name and year")
+    add_text("  3. Fill in Income Parameters (N, B, V, M, K)")
+    add_text("  4. Fill in Asset Parameters (L, R, E)")
+    add_text("  5. Adjust gold price if needed")
+    add_text("  6. Results appear automatically on the right")
+    add_blank()
+
+    add_text("For Multiple Ruler Comparison:", h3_font)
+    add_text("  1. Go to 'Ruler Table' tab")
+    add_text("  2. Each row is one ruler - fill in columns B through L (inputs)")
+    add_text("  3. Columns M through Z calculate automatically")
+    add_text("  4. Sort by any column to rank rulers")
+    add_text("  5. Use 'Comparison Table' tab for vertical comparison view")
+    add_blank()
+
+    # Special Cases
+    add_text("8. SPECIAL CASES", h1_font)
+    add_blank()
+    add_text("Private Individuals (Non-Sovereigns):", h3_font)
+    add_text("For private bankers, merchants, or families (e.g., Rothschilds, Fugger, Astor) who did not rule populations:")
+    add_text("  • Set Population (N) = 1")
+    add_text("  • Set Base Output (B) = 0.01")
+    add_text("  • Set Extraction Margin (M) = 0.01")
+    add_text("  • Set Capitalization Multiple (K) = 1")
+    add_text("  • Enter their actual wealth in Liquid Treasury (L) and Real Estate (R)")
+    add_text("  • Their wealth will be purely asset-based")
+    add_blank()
+
+    add_text("Ancient Rulers with Uncertain Data:", h3_font)
+    add_text("  • Use conservative population estimates")
+    add_text("  • Lower Base Output for pre-industrial economies (0.3-0.5)")
+    add_text("  • Lower Velocity for barter economies (2.0-3.0)")
+    add_text("  • Lower Capitalization Multiple for unstable regimes (5-15)")
+    add_blank()
+
+    # Interpretation
+    add_text("9. INTERPRETING RESULTS", h1_font)
+    add_blank()
+    add_text("Wealth Composition:", h3_font)
+    add_text("  • High Income % (>80%): Wealth based on economic control (large empires)")
+    add_text("  • High Asset % (>50%): Wealth based on accumulated treasure (conquest, inheritance)")
+    add_text("  • Balanced: Mix of ongoing revenue and stored wealth")
+    add_blank()
+
+    add_text("Income-to-Asset Ratio:", h3_font)
+    add_text("  • >10x: Empire primarily valued for its economic output")
+    add_text("  • 1-10x: Balanced between income and assets")
+    add_text("  • <1x: Wealth primarily from accumulated assets (typical for private individuals)")
+    add_blank()
+
+    add_text("Per Capita Wealth:", h3_font)
+    add_text("  • Higher = more extractive or more developed economy")
+    add_text("  • Compare rulers with similar time periods for meaningful comparison")
+    add_blank()
+
+    # Caveats
+    add_text("10. CAVEATS & LIMITATIONS", h1_font)
+    add_blank()
+    add_text("  • Historical data is often uncertain - treat results as estimates")
+    add_text("  • Model designed for sovereign rulers - private individuals need modified approach")
+    add_text("  • Gold ounce equivalents are approximations for non-monetary economies")
+    add_text("  • Nominal USD values depend on gold price assumption")
+    add_text("  • Cross-era comparisons have inherent limitations")
+    add_text("  • Model assumes stable rule - may overvalue unstable empires")
+    add_blank()
+
+    # Version
+    add_text("11. VERSION", h1_font)
+    add_text("SAVE Model v1.0 - Consolidated Imperial Valuation (CIV) Methodology")
+    add_text("Created: 2026")
+    add_blank()
+
+    # Apply dark fill to all cells
+    for r in range(1, row + 10):
+        for c in range(1, 7):
+            cell = ws4.cell(row=r, column=c)
+            if cell.fill.start_color.index == '00000000' or cell.fill.start_color.index is None:
+                cell.fill = dark_fill
+
     # Save the workbook
     wb.save(filename)
     print(f"Excel model saved to: {filename}")
